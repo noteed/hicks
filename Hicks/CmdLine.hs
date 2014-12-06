@@ -65,6 +65,7 @@ defaultMain machines = do
         , cmdProvision
         , cmdDeploy machines
         , cmdWait
+        , cmdTemplates machines
         ]
       &= summary versionString
       &= program "hicks"
@@ -120,6 +121,9 @@ data Cmd =
   | CmdWait
   { cmdServerUuid :: String
   , cmdState :: String
+  }
+  | CmdTemplates
+  { cmdMachines :: [Machine]
   }
   deriving (Data, Typeable)
 
@@ -301,6 +305,16 @@ cmdWait = CmdWait
     &= explicit
     &= name "wait"
 
+-- | Create a 'Templates' command.
+cmdTemplates :: [Machine] -> Cmd
+cmdTemplates machines = CmdTemplates
+  { cmdMachines = machines
+    &= ignore
+  } &= help
+      "List the templates available for the `create` command."
+    &= explicit
+    &= name "templates"
+
 -- | Run a sub-command.
 runCmd :: Cmd -> IO ()
 runCmd CmdAccount{..} = do
@@ -395,3 +409,6 @@ runCmd CmdDeploy{..} = deploy cmdMachines (T.pack cmdServerHostname)
 runCmd CmdWait{..} = do
   _ <- withAPIKey $ \u p -> waitServer u p cmdServerUuid (T.pack cmdState)
   return ()
+
+runCmd CmdTemplates{..} = do
+  mapM_ (putStrLn . T.unpack . machineHostname) cmdMachines
