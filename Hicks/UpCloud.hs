@@ -55,11 +55,11 @@ account username password =
   (accountResponse <$>) <$> ucGet username password "/1.0/account" []
 
 -- | Create a new server.
-createServer :: ByteString -> ByteString -> CreateServer -> IO (Maybe CreatedServer)
+createServer :: ByteString -> ByteString -> T.Machine -> IO (Maybe CreatedServer)
 createServer username password conf =
   (createServerResponse <$>) <$> ucPost username password "/1.0/server" [] body
   where
-  body = encode $ createServerToJSON conf
+  body = encode $ machineToJSON conf
 
 data CreateServer = CreateServer
   { createServerTitle :: Text
@@ -67,19 +67,12 @@ data CreateServer = CreateServer
   , createServerTemplate :: StorageTemplate
   }
 
-defaultCreateServer :: CreateServer
-defaultCreateServer = CreateServer
-  { createServerTitle = "Ubuntu 12.04 64-bits"
-  , createServerHostname = "www.example.com"
-  , createServerTemplate = Ubuntu1204
-  }
-
-createServerToJSON :: CreateServer -> Value
-createServerToJSON CreateServer{..} =
+machineToJSON :: T.Machine -> Value
+machineToJSON T.Machine{..} =
   Object $ fromList [("server", Object $ fromList
-    [ ("zone", String "uk-lon1")
-    , ("title", String createServerTitle)
-    , ("hostname", String createServerHostname)
+    [ ("zone", String zone)
+    , ("title", String machineTitle)
+    , ("hostname", String machineHostname)
     , ("password_delivery", String "none")
     , ("core_number", String "1")
     , ("memory_amount", String "1024")
@@ -97,6 +90,11 @@ createServerToJSON CreateServer{..} =
 
   where
   (storageUuid, storageTitle) = templateStorateTitle createServerTemplate
+  createServerTemplate = case machineDistribution of
+    T.Ubuntu1404 -> Ubuntu1404
+    T.Ubuntu1204 -> Ubuntu1204
+  zone = case machineProvider of
+    T.UpCloud T.UkLondon1 -> "uk-lon1"
 
 -- | Return servers information.
 servers :: ByteString -> ByteString -> IO ([Server])
@@ -234,7 +232,7 @@ authorize cmdServerUuid cmdPublicKey = do
 
 deploy :: [T.Machine] -> Text -> IO ()
 deploy machines hostname = withAPIKey $ \u p -> do
-  ms <- createServer u p $ deriveParameters machines hostname
+  ms <- createServer u p $ machineOrDie machines hostname
   case ms of
     Nothing -> putStrLn "Cannot create a server."
     Just CreatedServer{..} -> do
@@ -255,31 +253,6 @@ deploy machines hostname = withAPIKey $ \u p -> do
               provision (T.unpack $ ipAddress ip) "22"
               return ()
             _ -> putStrLn "No public IP address."
-
-test :: IO ()
-test = withAPIKey $ \u p -> do
-  putStrLn "Creating server..."
-  ms <- createServer u p defaultCreateServer
-  case ms of
-    Nothing -> putStrLn "Cannot create server."
-    Just CreatedServer{..} -> do
-      b <- waitServer u p (T.unpack createdServerUuid) "started"
-      if not b
-        then putStrLn "Cannot wait server."
-        else do
-          putStrLn "Stopping server..."
-          ms' <- stopServer u p $ T.unpack createdServerUuid
-          case ms' of
-            Nothing -> error "Cannor stop server."
-            Just _ -> do
-              b' <- waitServer u p (T.unpack createdServerUuid) "stopped"
-              if not b'
-                then putStrLn "Cannot wait server until it is stopped."
-                else do
-                  putStrLn "Deleting server..."
-                  deleteServer u p (T.unpack createdServerUuid)
-                  _ <- waitServer u p (T.unpack createdServerUuid) "deleted"
-                  putStrLn "Done."
 
 -- TODO hostname must be Text
 waitServer :: ByteString -> ByteString -> String -> Text -> IO Bool
@@ -578,15 +551,9 @@ withAPIKey f = do
       password = drop (length username + 1) basic
   f (pack username) (pack password)
 
-deriveParameters :: [T.Machine] -> Text -> CreateServer
-deriveParameters machines hostname = case lookup hostname machines' of
-  Just T.Machine{..} -> CreateServer
-    { createServerTitle = machineTitle
-    , createServerHostname = machineHostname
-    , createServerTemplate = case machineDistribution of
-        T.Ubuntu1404 -> Ubuntu1404
-        T.Ubuntu1204 -> Ubuntu1204
-    }
+machineOrDie :: [T.Machine] -> Text -> T.Machine
+machineOrDie machines hostname = case lookup hostname machines' of
+  Just m -> m
   Nothing -> error "Cannot derive parameters from the given hostname."
   where
   machines' = map (\m -> (T.machineHostname m, m)) machines

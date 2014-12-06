@@ -65,8 +65,6 @@ defaultMain machines = do
         , cmdProvision
         , cmdDeploy machines
         , cmdWait
-
-        , cmdCreatePollStopDelete
         ]
       &= summary versionString
       &= program "hicks"
@@ -123,7 +121,6 @@ data Cmd =
   { cmdServerUuid :: String
   , cmdState :: String
   }
-  | CmdCreatePollStopDelete
   deriving (Data, Typeable)
 
 -- | Create an 'Account' command.
@@ -304,14 +301,6 @@ cmdWait = CmdWait
     &= explicit
     &= name "wait"
 
--- | Test the Create/Wait/Stop/Delete commands.
-cmdCreatePollStopDelete :: Cmd
-cmdCreatePollStopDelete = CmdCreatePollStopDelete
-    &= help "Test the Create/Wait/Stop/Delete commands. Note that disks are \
-            \not deleted."
-    &= explicit
-    &= name "test"
-
 -- | Run a sub-command.
 runCmd :: Cmd -> IO ()
 runCmd CmdAccount{..} = do
@@ -320,7 +309,7 @@ runCmd CmdAccount{..} = do
 
 runCmd CmdCreateServer{..} = do
   ms <- withAPIKey $ \u p -> createServer u p $
-    deriveParameters cmdMachines (T.pack cmdServerHostname)
+    machineOrDie cmdMachines (T.pack cmdServerHostname)
   case ms of
     Nothing -> putStrLn "Cannot create a server."
     Just CreatedServer{..} -> do
@@ -406,7 +395,3 @@ runCmd CmdDeploy{..} = deploy cmdMachines (T.pack cmdServerHostname)
 runCmd CmdWait{..} = do
   _ <- withAPIKey $ \u p -> waitServer u p cmdServerUuid (T.pack cmdState)
   return ()
-
-runCmd CmdCreatePollStopDelete{..} = do
-  test
-
