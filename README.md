@@ -34,7 +34,7 @@ At this point you should be able to run:
 
 This command reports your username and available credits (in cents).
 
-## Next step
+## Next steps
 
 Have a look at the `test-against-upcloud.sh` script. It shows the basic
 operations you can perform to create a machine on UpCloud, wait for it until it
@@ -50,7 +50,7 @@ script located at `root/bin/provision` that will be run after upload.
 
 ## Notes
 
-UpCloud doens't allow to set a public SSH key automatically when a machine is
+UpCloud doesn't allow to set a public SSH key automatically when a machine is
 created. Instead Hicks will store the root password return by UpCloud in
 `~/.hicks` until the `hicks authorize` command is run. That command will upload
 a public SSH key you choose. Further disabling the root password should be done
