@@ -1,0 +1,43 @@
+name:                hicks
+version:             0.0.0
+Cabal-Version:       >= 1.8
+synopsis:            Hicks happily spawns machines.
+description:
+  Hicks happily spawns machines.
+category:            Utility
+license:             BSD3
+license-file:        LICENSE
+author:              Vo Minh Thu
+maintainer:          thu@hypered.io
+build-type:          Simple
+
+library
+  build-depends:       aeson == 0.6.*,
+                       aeson-streams == 0.1.*,
+                       base == 4.*,
+                       bytestring == 0.9.*,
+                       directory == 1.1.*,
+                       filemanip == 0.3.*,
+                       filepath == 1.3.*,
+                       process == 1.1.*,
+                       template == 0.2.*,
+                       temporary == 1.1.*,
+                       text == 0.11.*,
+                       unix == 2.5.*,
+                       unordered-containers == 0.2.*,
+                       vector == 0.10.*
+  exposed-modules:     Hicks.Provision,
+                       Hicks.UpCloud
+  ghc-options:         -Wall
+
+executable hicks
+  hs-source-dirs:      bin
+  main-is:             hicks.hs
+  build-depends:       base == 4.*,
+                       cmdargs == 0.9.*,
+                       directory == 1.1.*,
+                       filepath == 1.3.*,
+                       hicks,
+                       text == 0.11.*
+  ghc-options:         -Wall
+                       -threaded
