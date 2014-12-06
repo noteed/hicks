@@ -6,7 +6,7 @@ Hicks is a simple tool to spawn and provision machines. Currently only
 [UpCloud](http://upcloud.com/) is supported but in the future, other services
 should be added (e.g. [DigitalOcean](https://www.digitalocean.com/),
 [Linode](https://www.linode.com/), [Vagrant](https://www.vagrantup.com/), or
-already existing hosts (e.g. phisycal servers rented by the month)).
+already existing hosts (e.g. physical servers rented by the month)).
 
 ## Getting started
 
