@@ -1,3 +1,3 @@
-# Hobbes
+# Hicks
 
-Hobbes happily spawns machines.
+Hicks happily spawns machines.
