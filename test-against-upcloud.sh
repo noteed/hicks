@@ -13,23 +13,25 @@
 HOSTNAME=hicks.noteed.com
 PUBLIC_KEY=/home/thu/.ssh/private_rsa.pub
 
-SERVER_ID=$(./dist/build/hicks/hicks create ${HOSTNAME})
+export PATH=dist/build/hicks/:$PATH
+
+SERVER_ID=$(hicks create ${HOSTNAME})
 echo ${SERVER_ID}
-./dist/build/hicks/hicks wait      ${SERVER_ID} started
-./dist/build/hicks/hicks password  ${SERVER_ID}
-./dist/build/hicks/hicks authorize ${SERVER_ID} ${PUBLIC_KEY}
+hicks wait      ${SERVER_ID} started
+hicks password  ${SERVER_ID}
+hicks authorize ${SERVER_ID} ${PUBLIC_KEY}
 
 sleep 1
-IP=`./dist/build/hicks/hicks ip ${SERVER_ID}`
+IP=`hicks ip ${SERVER_ID}`
 echo ${IP}
 ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@${IP} 'uname -a'
 
 sleep 1
-./dist/build/hicks/hicks upload    ${SERVER_ID}
-./dist/build/hicks/hicks provision ${SERVER_ID}
-./dist/build/hicks/hicks wait      ${SERVER_ID} Ready
+hicks upload    ${SERVER_ID}
+hicks provision ${SERVER_ID}
+hicks wait      ${SERVER_ID} Ready
 ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@${IP} 'cat provision.log'
 
-./dist/build/hicks/hicks stop      ${SERVER_ID}
-./dist/build/hicks/hicks wait      ${SERVER_ID} stopped
-./dist/build/hicks/hicks delete    ${SERVER_ID}
+hicks stop      ${SERVER_ID}
+hicks wait      ${SERVER_ID} stopped
+hicks delete    ${SERVER_ID}
