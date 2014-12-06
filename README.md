@@ -48,6 +48,13 @@ Provisioning consists of simply uploading a file hierarchy locally stored in
 the `provision/<some-hostname>` director. In particular, it should contain a
 script located at `root/bin/provision` that will be run after upload.
 
+## Configure
+
+When you ran `cabal install` above, Cabal created an executable `hicks`.
+Actually, the source of that executable is `bin/config.hs`. This means you can
+either fork this repository and configure Hicks to your liking by modifying
+`bin/config.hs`, or create a new program depending on the `hicks` package.
+
 ## Notes
 
 UpCloud doesn't allow to set a public SSH key automatically when a machine is

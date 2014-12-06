@@ -14,7 +14,7 @@
 --
 --   > curl --basic -u`cat upcloud-key.txt` https://api.upcloud.com/1.0/server
 --   > curl --basic -u`cat upcloud-key.txt` https://api.upcloud.com/1.0/server/:uuid
-module Main (main) where
+module Hicks.CmdLine where
 
 import Control.Applicative ((<$>))
 import qualified Data.Text as T
@@ -27,9 +27,10 @@ import System.FilePath ((</>))
 
 import Hicks.Provision (provision, upload)
 import Hicks.UpCloud
+import Hicks.Types
 
-main :: IO ()
-main = do
+defaultMain :: [Machine] -> IO ()
+defaultMain machines = do
   mpath <- lookup "SSH_PASSWORD_FILE" <$> getEnvironment
   case mpath of
     -- Special case when "SSH_PASSWORD_FILE" is in the environment.
@@ -50,7 +51,7 @@ main = do
     Nothing -> (runCmd =<<) $ cmdArgs $
       modes
         [ cmdAccount
-        , cmdCreateServer
+        , cmdCreateServer machines
         , cmdServer
         , cmdServers
         , cmdStopServer
@@ -62,7 +63,7 @@ main = do
         , cmdAuthorize
         , cmdUpload
         , cmdProvision
-        , cmdDeploy
+        , cmdDeploy machines
         , cmdWait
 
         , cmdCreatePollStopDelete
@@ -80,6 +81,7 @@ data Cmd =
     CmdAccount
   | CmdCreateServer
   { cmdServerHostname :: String
+  , cmdMachines :: [Machine]
   }
   | CmdServer
   { cmdServerUuid :: String
@@ -115,6 +117,7 @@ data Cmd =
   }
   | CmdDeploy
   { cmdServerHostname :: String
+  , cmdMachines :: [Machine]
   }
   | CmdWait
   { cmdServerUuid :: String
@@ -133,11 +136,13 @@ cmdAccount = CmdAccount
     &= name "account"
 
 -- | Create a 'CreateServer' command.
-cmdCreateServer :: Cmd
-cmdCreateServer = CmdCreateServer
+cmdCreateServer :: [Machine] -> Cmd
+cmdCreateServer machines = CmdCreateServer
   { cmdServerHostname = def
     &= argPos 0
     &= typ "HOSTNAME"
+  , cmdMachines = machines
+    &= ignore
   } &= help
       "Create a server. The given HOSTNAME is parsed to derive a few \
       \parameters."
@@ -272,11 +277,13 @@ cmdProvision = CmdProvision
     &= name "provision"
 
 -- | Create a 'Deploy' command.
-cmdDeploy :: Cmd
-cmdDeploy = CmdDeploy
+cmdDeploy :: [Machine] -> Cmd
+cmdDeploy machines = CmdDeploy
   { cmdServerHostname = def
     &= argPos 0
     &= typ "SERVER HOSTNAME"
+  , cmdMachines = machines
+    &= ignore
   } &= help
       "Combine all the other commands, from machine creation to complete \
       \provisioning."
@@ -312,7 +319,8 @@ runCmd CmdAccount{..} = do
   putStr $ maybe "Cannot retrieve account information.\n" showAccount ma
 
 runCmd CmdCreateServer{..} = do
-  ms <- withAPIKey $ \u p -> createServer u p $ deriveParameters cmdServerHostname
+  ms <- withAPIKey $ \u p -> createServer u p $
+    deriveParameters cmdMachines (T.pack cmdServerHostname)
   case ms of
     Nothing -> putStrLn "Cannot create a server."
     Just CreatedServer{..} -> do
@@ -393,7 +401,7 @@ runCmd CmdProvision{..} = do
         ip : _ -> provision (T.unpack $ ipAddress ip) "22"
         _ -> putStrLn "No public IP address."
 
-runCmd CmdDeploy{..} = deploy cmdServerHostname
+runCmd CmdDeploy{..} = deploy cmdMachines (T.pack cmdServerHostname)
 
 runCmd CmdWait{..} = do
   _ <- withAPIKey $ \u p -> waitServer u p cmdServerUuid (T.pack cmdState)

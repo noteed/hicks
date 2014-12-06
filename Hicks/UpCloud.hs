@@ -26,6 +26,7 @@ import System.Process (readProcess, runProcess, waitForProcess)
 import Network.Aeson.Client (apiDelete, apiGet, apiPost, Result(..))
 
 import Hicks.Provision (provision, upload)
+import qualified Hicks.Types as T
 
 -- | Execute a GET agains the specified URI (e.g. `/account`) using the
 -- supplied parameters.
@@ -167,6 +168,7 @@ connect cmdServerUuid = do
           Just <$> checkSshDaemon (T.unpack $ ipAddress ip) passfile
         _ -> putStrLn "No public IP address." >> return Nothing
 
+checkSshDaemon :: String -> String -> IO Bool
 checkSshDaemon ip passfile = do
   -- "DISPLAY" is set to allow the use of "SSH_ASKPASS".
   -- See also the comment in bin/hicks.hs about "SSH_ASKPASS".
@@ -182,6 +184,7 @@ checkSshDaemon ip passfile = do
     ExitSuccess -> return True
     _ -> return False
 
+waitSshDaemon :: String -> String -> Int -> IO ()
 waitSshDaemon ip passfile n = do
   b <- checkSshDaemon ip passfile
   if b
@@ -229,9 +232,9 @@ authorize cmdServerUuid cmdPublicKey = do
           return ()
         _ -> putStrLn "No public IP address."
 
-deploy :: String -> IO ()
-deploy hostname = withAPIKey $ \u p -> do
-  ms <- createServer u p $ deriveParameters hostname
+deploy :: [T.Machine] -> Text -> IO ()
+deploy machines hostname = withAPIKey $ \u p -> do
+  ms <- createServer u p $ deriveParameters machines hostname
   case ms of
     Nothing -> putStrLn "Cannot create a server."
     Just CreatedServer{..} -> do
@@ -245,10 +248,10 @@ deploy hostname = withAPIKey $ \u p -> do
       if not b
         then putStrLn "Cannot wait server."
         else do
-          authorize hostname "provision/assertive.io/root/.ssh/authorized_keys"
+          authorize (T.unpack createdServerUuid) "provision/assertive.io/root/.ssh/authorized_keys"
           case filter ((== "public") . ipAccess) createdServerIpAddresses of
             ip : _ -> do
-              upload (T.unpack $ ipAddress ip) "22" hostname
+              upload (T.unpack $ ipAddress ip) "22" (T.unpack hostname)
               provision (T.unpack $ ipAddress ip) "22"
               return ()
             _ -> putStrLn "No public IP address."
@@ -307,6 +310,7 @@ waitServer username password uuid state = do
           return False
 
 -- | Return the state in /STATE.
+getSlashState :: String -> IO Text
 getSlashState ip = do
   s <- readProcess "ssh"
     [ "-q", "-o", "UserKnownHostsFile=/dev/null", "-o", "StrictHostKeyChecking=no"
@@ -574,15 +578,18 @@ withAPIKey f = do
       password = drop (length username + 1) basic
   f (pack username) (pack password)
 
--- TODO Config-based.
-deriveParameters :: String -> CreateServer
-deriveParameters hostname = case hostname of
-  "hicks.noteed.com" -> CreateServer
-    { createServerTitle = T.pack $ hostname ++ " (Ubuntu Server 14.04 64-bits)"
-    , createServerHostname = T.pack hostname
-    , createServerTemplate = Ubuntu1404
+deriveParameters :: [T.Machine] -> Text -> CreateServer
+deriveParameters machines hostname = case lookup hostname machines' of
+  Just T.Machine{..} -> CreateServer
+    { createServerTitle = machineTitle
+    , createServerHostname = machineHostname
+    , createServerTemplate = case machineDistribution of
+        T.Ubuntu1404 -> Ubuntu1404
+        T.Ubuntu1204 -> Ubuntu1204
     }
-  _ -> error "Cannot derive parameters from the given hostname."
+  Nothing -> error "Cannot derive parameters from the given hostname."
+  where
+  machines' = map (\m -> (T.machineHostname m, m)) machines
 
 data StorageTemplate =
     Ubuntu1204
