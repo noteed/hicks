@@ -56,10 +56,10 @@ account username password =
 
 -- | Create a new server.
 createServer :: ByteString -> ByteString -> T.Machine -> IO (Maybe CreatedServer)
-createServer username password conf =
+createServer username password machine =
   (createServerResponse <$>) <$> ucPost username password "/1.0/server" [] body
   where
-  body = encode $ machineToJSON conf
+  body = encode $ machineToJSON machine
 
 data CreateServer = CreateServer
   { createServerTitle :: Text
@@ -232,7 +232,8 @@ authorize cmdServerUuid cmdPublicKey = do
 
 deploy :: [T.Machine] -> Text -> IO ()
 deploy machines hostname = withAPIKey $ \u p -> do
-  ms <- createServer u p $ machineOrDie machines hostname
+  let machine = machineOrDie machines hostname
+  ms <- createServer u p machine
   case ms of
     Nothing -> putStrLn "Cannot create a server."
     Just CreatedServer{..} -> do
@@ -246,7 +247,7 @@ deploy machines hostname = withAPIKey $ \u p -> do
       if not b
         then putStrLn "Cannot wait server."
         else do
-          authorize (T.unpack createdServerUuid) "provision/assertive.io/root/.ssh/authorized_keys"
+          authorize (T.unpack createdServerUuid) (T.machinePublicKey machine)
           case filter ((== "public") . ipAccess) createdServerIpAddresses of
             ip : _ -> do
               upload (T.unpack $ ipAddress ip) "22" (T.unpack hostname)

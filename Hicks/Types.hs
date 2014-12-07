@@ -10,6 +10,9 @@ data Machine = Machine
   , machineHostname :: Text
   , machineDistribution :: Distribution
   , machineProvider :: Provider
+  , machinePublicKey :: FilePath
+    -- ^ Path to a public SSH key uploaded to the provisioned machine at the
+    -- `authorize` step.
   }
   deriving (Data, Typeable)
 

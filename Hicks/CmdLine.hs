@@ -60,7 +60,7 @@ defaultMain machines = do
         , cmdIp
         , cmdPassword
         , cmdConnect
-        , cmdAuthorize
+        , cmdAuthorize machines
         , cmdUpload
         , cmdProvision
         , cmdDeploy machines
@@ -106,7 +106,7 @@ data Cmd =
   }
   | CmdAuthorize
   { cmdServerUuid :: String
-  , cmdPublicKey :: String
+  , cmdMachines :: [Machine]
   }
   | CmdUpload
   { cmdServerUuid :: String
@@ -237,14 +237,13 @@ cmdConnect = CmdConnect
     &= name "connect"
 
 -- | Create an 'Authorize' command.
-cmdAuthorize :: Cmd
-cmdAuthorize = CmdAuthorize
+cmdAuthorize :: [Machine] -> Cmd
+cmdAuthorize machines = CmdAuthorize
   { cmdServerUuid = def
     &= argPos 0
     &= typ "SERVER UUID"
-  , cmdPublicKey = def
-    &= argPos 1
-    &= typ "PUBLIC_KEY"
+  , cmdMachines = machines
+    &= ignore
   } &= help
       "Add an SSH public key to to server's root `.ssh/authorized_keys` file. \
       \This operation also deletes the password locally saved in `~/.hicks`."
@@ -383,7 +382,14 @@ runCmd CmdConnect{..} = do
     Just False -> putStrLn "Connection failed."
 
 -- TODO Check the public key is actually public.
-runCmd CmdAuthorize{..} = authorize cmdServerUuid cmdPublicKey
+runCmd CmdAuthorize{..} = do
+  ms <- withAPIKey $ \u p -> server u p cmdServerUuid
+  case ms of
+    Nothing -> putStrLn "Cannot find server."
+    Just s -> do
+      let hostname = server'Hostname s
+          machine = machineOrDie cmdMachines hostname
+      authorize cmdServerUuid (machinePublicKey machine)
 
 runCmd CmdUpload{..} = do
   ms <- withAPIKey $ \u p -> server u p cmdServerUuid

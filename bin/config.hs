@@ -16,5 +16,6 @@ machines =
     , machineHostname = "hicks.noteed.com"
     , machineDistribution = Ubuntu1404
     , machineProvider = UpCloud UkLondon1
+    , machinePublicKey = "/home/thu/.ssh/private_rsa.pub"
     }
   ]

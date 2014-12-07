@@ -7,11 +7,10 @@
 # The hostname `hicks.noteed.com` is really just an example. You don't need
 # to control that domain to run this example.
 #
-# Replace PUBLIC_KEY by an actual public SSH key you have on your local
-# machine.
+# Replace the `machinePublicKey` in `bin/config.hs` by an actual public SSH
+# key you have on your local machine (and recompile the program).
 
 HOSTNAME=hicks.noteed.com
-PUBLIC_KEY=/home/thu/.ssh/private_rsa.pub
 
 export PATH=dist/build/hicks/:$PATH
 
@@ -19,7 +18,7 @@ SERVER_ID=$(hicks create ${HOSTNAME})
 echo ${SERVER_ID}
 hicks wait      ${SERVER_ID} started
 hicks password  ${SERVER_ID}
-hicks authorize ${SERVER_ID} ${PUBLIC_KEY}
+hicks authorize ${SERVER_ID}
 
 sleep 1
 IP=`hicks ip ${SERVER_ID}`
