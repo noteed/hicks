@@ -6,15 +6,18 @@
 echo -n Provisioning > /STATE
 
 apt-get update
-apt-get install -q -y git
+apt-get install -q -y docker.io
 
-mkdir clones
-pushd clones
-git clone https://github.com/noteed/hicks.git
-pushd hicks
-head README.md
-popd
-popd
+# Try the Hadley Docker image.
+
+mkdir -p _static
+chmod a+xw _static
+docker run \
+  -v `pwd`/_static:/artifacts \
+  noteed/hadley \
+  hadley build https://github.com/noteed/hadley.git --target /artifacts
+
+ls -la _static
 
 echo -n Ready > /STATE
 echo Ready
