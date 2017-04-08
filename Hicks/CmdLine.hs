@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -fno-cse #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -316,7 +317,7 @@ cmdTemplates machines = CmdTemplates
 
 -- | Run a sub-command.
 runCmd :: Cmd -> IO ()
-runCmd CmdAccount{..} = do
+runCmd CmdAccount = do
   ma <- withAPIKey account
   putStr $ maybe "Cannot retrieve account information.\n" showAccount ma
 
@@ -332,7 +333,7 @@ runCmd CmdCreateServer{..} = do
         T.unpack createdServerPassword
       putStrLn $ T.unpack createdServerUuid
 
-runCmd CmdServers{..} = do
+runCmd CmdServers = do
   ms <- withAPIKey servers
   mapM_ (putStr . (++ "--\n") . showServer) ms
 
